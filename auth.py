@@ -43,7 +43,7 @@ import json
 from django.conf import settings
 
 from tardis.tardis_portal.auth.interfaces import GroupProvider, AuthProvider, \
-	UserProvider
+    UserProvider
 from tardis.tardis_portal.models import UserAuthentication
 
 
@@ -212,11 +212,60 @@ class Backend(AuthProvider, UserProvider):
         request.session[EPN_LIST] = user_info['epns']
         request.user.epn_list = user_info['epns']
         logger.info('%s %s %s' % (user_info['name'], user_info['username'],
-            user_info['epns']))
+                                  user_info['epns']))
         logger.info(user_info)
 
-        return self._make_user_dict(user_info)
+        # need to make sure ObjectACLs exist for all epns
+        for epn in user_info['epns']:
+            try:
+                # create vbl group
+                exp = ExperimentParameterSet.objects.get(
+                    experimentparameter__string_value=epn,
+                    experimentparameter__name__name='EPN').experiment
+                acls = ObjectACL.objects.filter(
+                    content_type=exp.get_ct(),
+                    object_id=exp.id,
+                    pluginId='vbl_group',
+                    entityId=epn,
+                    canRead=True,
+                    aclOwnershipType=ObjectACL.SYSTEM_OWNED)
+                if lens(acls) == 0:
+                    acl = ObjectACL(content_type=exp.get_ct(),
+                                    object_id=exp.id,
+                                    pluginId='vbl_group',
+                                    entityId=epn,
+                                    canRead=True,
+                                    aclOwnershipType=ObjectACL.SYSTEM_OWNED)
+                    acl.save()
 
+                from django.contrib.auth.models import Group
+                from tardis.tardis_portal.auth.localdb_auth import django_group
+
+                beamline_group = "BEAMLINE_MX"
+                group, created = Group.objects.get_or_create(name=beamline_group)
+
+                acl = ObjectACL(content_type=exp.get_ct(),
+                                object_id=exp.id,
+                                pluginId=django_group,
+                                entityId=str(group.id),
+                                canRead=True,
+                                aclOwnershipType=ObjectACL.SYSTEM_OWNED)
+                acl.save()
+
+                group, created = Group.objects.get_or_create(name='admin')
+                acl = ObjectACL(content_type=exp.get_ct(),
+                                object_id=exp.id,
+                                pluginId=django_group,
+                                entityId=str(group.id),
+                                isOwner=True,
+                                canRead=True,
+                                aclOwnershipType=ObjectACL.SYSTEM_OWNED)
+                acl.save()
+
+            except ExperimentParameterSet.DoesNotExist:
+                pass
+
+        return self._make_user_dict(user_info)
 
     def get_user(self, user_id):
         if user_id is None:
@@ -261,10 +310,10 @@ class Backend(AuthProvider, UserProvider):
     def _make_user_dict(self, user_info):
         # the authentication provider convention, however the vbl
         # does not distinguish between usernames and emails
-        return { 'display': user_info['name'],
-                 'id': user_info['username'],
-                 'email': user_info['username'],
-                 'first_name': user_info['first_name'],
-                 'last_name': user_info['last_name'],
-               }
-
+        return {
+            'display': user_info['name'],
+            'id': user_info['username'],
+            'email': user_info['username'],
+            'first_name': user_info['first_name'],
+            'last_name': user_info['last_name'],
+        }
