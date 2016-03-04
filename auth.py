@@ -45,7 +45,7 @@ from django.conf import settings
 from tardis.tardis_portal.auth.interfaces import GroupProvider, AuthProvider, \
     UserProvider
 from tardis.tardis_portal.models import (
-    UserAuthentication, ExperimentParameterSet)
+    UserAuthentication, ExperimentParameterSet, ObjectACL)
 
 
 logger = logging.getLogger('tardis.vbl')
@@ -230,7 +230,7 @@ class Backend(AuthProvider, UserProvider):
                     entityId=epn,
                     canRead=True,
                     aclOwnershipType=ObjectACL.SYSTEM_OWNED)
-                if lens(acls) == 0:
+                if len(acls) == 0:
                     acl = ObjectACL(content_type=exp.get_ct(),
                                     object_id=exp.id,
                                     pluginId='vbl_group',
