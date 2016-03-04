@@ -44,7 +44,8 @@ from django.conf import settings
 
 from tardis.tardis_portal.auth.interfaces import GroupProvider, AuthProvider, \
     UserProvider
-from tardis.tardis_portal.models import UserAuthentication
+from tardis.tardis_portal.models import (
+    UserAuthentication, ExperimentParameterSet)
 
 
 logger = logging.getLogger('tardis.vbl')
