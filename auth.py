@@ -220,7 +220,7 @@ class Backend(AuthProvider, UserProvider):
         for epn in user_info['epns']:
             try:
                 # create vbl group
-                exp = ExperimentParameterSet.objects.get(
+                exp = ExperimentParameterSet.objects.first(
                     experimentparameter__string_value=epn,
                     experimentparameter__name__name='EPN').experiment
                 acls = ObjectACL.objects.filter(
