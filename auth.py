@@ -220,9 +220,13 @@ class Backend(AuthProvider, UserProvider):
         for epn in user_info['epns']:
             try:
                 # create vbl group
-                exp = ExperimentParameterSet.objects.filter(
+                epn_parameter_set = ExperimentParameterSet.objects.filter(
                     experimentparameter__string_value=epn,
-                    experimentparameter__name__name='EPN').first().experiment
+                    experimentparameter__name__name='EPN').first()
+                # handle case where EPN exists but no experiments exists yet
+                if epn_parameter_set is None:
+                    continue
+                exp = epn_parameter_set.experiment
                 acls = ObjectACL.objects.filter(
                     content_type=exp.get_ct(),
                     object_id=exp.id,
